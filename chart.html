@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html ng-app="myModule">
+<head>
+	<meta charset="utf-8" />
+	<title> Highcharts directive demo </title>
+	<link rel="stylesheet" type="text/css" href="lib/bootstrap/css/bootstrap.min.css">
+	<script type="text/javascript" src="lib/angular.min.js"></script>
+	<script type="text/javascript" src="lib/highcharts.js"></script>
+	<script src="data.js"></script>
+	<style type="text/css">
+		.form-group {
+		    margin-bottom: 15px;
+		}
+		.setting-panel {
+			height: 370px;
+			align-content: center;
+			padding-top: 100px;
+		}
+	</style>
+</head>
+
+<body ng-controller="myController" style="padding: 40px">
+	
+	<div class="col-sm-3 ">
+		<form class="form-horizontal">
+			<div class="panel panel-primary">
+				<div class="panel-body setting-panel">
+					<div class="form-group"><h3 class="text-center">Filters</h3></div>
+					<div class="form-group">
+						<label class="control-label col-sm-4">Filter1</label>
+						<div class="col-sm-7"><input type="text" id="filter1" class="form-control" ></div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-sm-4">Filter2</label>
+						<div class="col-sm-7"><input type="text" id="filter2" class="form-control" ></div>
+					</div>
+					<div class="form-group">
+						<label class="control-label col-sm-4">Filter3</label>
+						<div class="col-sm-7"><input type="text" class="form-control" ng-model="user.filter3"></div>
+					</div>
+				</div>
+			</div>
+			<button type="button" class="btn btn-success btn-block" ng-click="setFilter()">Submit</button>
+		</form>
+	</div>
+
+	<div class="col-sm-6">
+		<div class="panel panel-primary">
+			<div class="panel-body">
+				<hc-chart title="Browser usage" data="chartData" >Placeholder for pie chart</hc-chart>
+			</div>
+		</div>
+
+	</div> 
+	<script>
+		angular.module('myModule', [])
+			.directive('hcChart', function () {
+				return {
+					restrict: 'E',
+					template: '<div></div>',
+					scope: {
+						title: '@',
+						data: '='
+					},
+					link: function (scope, element) {
+						var chart = Highcharts.chart(element[0], {
+							chart: {
+								type: 'column',
+								width: 800 
+							},
+							title: {
+								text: scope.title
+							},
+							xAxis: {
+								categories: scope.data.x_axis
+							  },
+							yAxis: {
+								min: 0,
+								title: {
+								  text: 'Population'
+								},
+								stackLabels: {
+								  enabled: true,
+								  style: {
+									fontWeight: 'bold',
+									color: (Highcharts.theme && Highcharts.theme.textColor) || 'gray'
+								  }
+								}
+							  },
+							tooltip: {
+								headerFormat: '<b>{point.x}</b><br/>',
+								pointFormat: '{series.name}: {point.y}<br/>Total: {point.stackTotal}'
+							  },
+							legend: {
+								align: 'center',
+								x: -30,
+								verticalAlign: 'bottom',
+								y: 25,
+								floating: true,
+								backgroundColor: (Highcharts.theme && Highcharts.theme.background2) || 'white',
+								borderColor: '#CCC',
+								borderWidth: 1,
+								shadow: false
+							  },
+							plotOptions: {
+								column: {
+								  stacking: 'normal',
+								  cursor: 'pointer',
+								  dataLabels: {
+									enabled: true,
+									color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white'
+								  }
+								}
+							},
+							series:  scope.data.maindata
+						});
+					}
+				};
+			})
+			.controller('myController', function ($scope) {
+				var yearList = []
+				var chartDataList =	[];
+								
+				initData();
+				filterData();
+
+				$scope.setFilter = function() {
+					var from = document.getElementById('filter1').value
+					var to = document.getElementById('filter2').value
+					filterData(from, to);
+
+					
+				};
+
+				function initData(){
+					var datas = data; 	var sortdata =[];
+					
+					while (datas.length > 0) {
+						var latestData = datas[0];	var latestIndex = 0
+						for(var index in datas){
+							if(latestData.year > datas[index].year){
+								latestData = datas[index]
+								latestIndex = index
+							}
+						}
+						
+						sortdata.push(latestData)
+						yearList.push(latestData.year)
+						datas.splice(latestIndex,1)
+					}
+
+					for(var city_index in cities){
+						var city_name = cities[city_index];		var city_pop = []
+						for(var index in sortdata){
+							city_pop.push(Number(sortdata[index].population[city_name]))
+						}
+						var chartdata = {name:city_name, data:city_pop}
+						chartDataList.push(chartdata)
+					}
+				};
+
+				function filterData(from = 0, to = 0){
+					var filterdata = []; var startPos = 0; var endPos = 0;
+					
+					if(from == 0 && to == 0){
+						startPos = yearList.length - 5; endPos = yearList.length;
+					}else{
+						for(var index in yearList){
+							if(from <= yearList[index] && !startPos)	startPos = index
+							if(to <= yearList[index] && !endPos)	endPos = index +1
+						}
+						
+						if(!endPos) endPos = yearList.length
+						if((endPos-startPos) > 10) endPos = startPos+10
+					}
+					
+					for(var index in chartDataList){
+						filterdata.push({name:chartDataList[index].name, data:chartDataList[index].data.slice(startPos,endPos)});
+					}
+					$scope.chartData = {
+						x_axis:yearList.slice(startPos, endPos),
+						maindata:filterdata
+					}
+				}
+				
+			});
+
+			
+	</script>
+</body>
+</html>
